@@ -81,7 +81,15 @@ export function AQIProvider({ children }) {
       if (!isMounted) return;
 
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = import.meta.env.VITE_WS_URL || `${protocol}//${window.location.host}/ws/aqi`;
+      let wsUrl = import.meta.env.VITE_WS_URL;
+      if (!wsUrl && import.meta.env.VITE_API_URL) {
+        const backendUrl = import.meta.env.VITE_API_URL;
+        const wsProtocol = backendUrl.startsWith('https:') ? 'wss:' : 'ws:';
+        wsUrl = backendUrl.replace(/^https?:/, wsProtocol) + '/ws/aqi';
+      }
+      if (!wsUrl) {
+        wsUrl = `${protocol}//${window.location.host}/ws/aqi`;
+      }
 
       try {
         const ws = new WebSocket(wsUrl);
