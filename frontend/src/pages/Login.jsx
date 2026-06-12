@@ -158,7 +158,7 @@ export default function Login() {
                   type={showPassword ? 'text' : 'password'}
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  className="input-field pr-11"
+                  className="input-field !pr-11"
                   placeholder="••••••••"
                   required
                 />

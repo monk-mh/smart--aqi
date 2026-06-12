@@ -76,7 +76,7 @@ export default function Dashboard() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search sensors..."
-            className="input-field pl-10"
+            className="input-field !pl-10"
           />
         </div>
         <div className="flex gap-2">
