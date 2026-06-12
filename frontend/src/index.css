@@ -1,0 +1,331 @@
+@import "tailwindcss";
+
+/* ─── Google Font Import ────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ─── Custom Theme ──────────────────────────────────────────────── */
+@theme {
+  --color-surface-dark: #07080f;
+  --color-surface-elevated: #0d0f1a;
+  --color-surface-card: rgba(255, 255, 255, 0.03);
+  --color-surface-card-hover: rgba(255, 255, 255, 0.06);
+  --color-border-glass: rgba(255, 255, 255, 0.06);
+  --color-border-glow: rgba(255, 255, 255, 0.12);
+
+  --color-aqi-good: #22c55e;
+  --color-aqi-moderate: #eab308;
+  --color-aqi-sensitive: #f97316;
+  --color-aqi-unhealthy: #ef4444;
+  --color-aqi-very-unhealthy: #a855f7;
+  --color-aqi-hazardous: #7f1d1d;
+
+  --color-accent-primary: #6366f1;
+  --color-accent-secondary: #8b5cf6;
+  --color-accent-glow: rgba(99, 102, 241, 0.25);
+
+  --color-severity-warning: #f59e0b;
+  --color-severity-danger: #ef4444;
+  --color-severity-critical: #dc2626;
+}
+
+/* ─── Global Resets ─────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+body {
+  background: var(--color-surface-dark);
+  color: #e2e8f0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ─── Glass Card ────────────────────────────────────────────────── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 8px 40px -8px rgba(0, 0, 0, 0.5);
+  transform: translateY(-1px);
+}
+
+.glass-card-static {
+  background: rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+}
+
+/* ─── Background Gradient ───────────────────────────────────────── */
+.bg-gradient-main {
+  background:
+    radial-gradient(ellipse 80% 50% at 10% 0%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 90% 100%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
+    var(--color-surface-dark);
+}
+
+/* ─── Login Background ──────────────────────────────────────────── */
+.bg-gradient-login {
+  background:
+    radial-gradient(ellipse 60% 60% at 50% 30%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 20% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 40% at 80% 70%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+    var(--color-surface-dark);
+}
+
+/* ─── Subtle shine on glass inputs ──────────────────────────────── */
+.input-field {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  color: white;
+  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+  width: 100%;
+  outline: none;
+  transition: all 0.25s ease;
+}
+
+.input-field::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.input-field:focus {
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ─── Button Primary ────────────────────────────────────────────── */
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.8rem 1.5rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 20px -4px rgba(99, 102, 241, 0.4);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 6px 28px -4px rgba(99, 102, 241, 0.5);
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── Glow Pulse Animation ──────────────────────────────────────── */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px var(--glow-color, rgba(34, 197, 94, 0.4));
+  }
+  50% {
+    box-shadow: 0 0 20px var(--glow-color, rgba(34, 197, 94, 0.7)),
+                0 0 40px var(--glow-color, rgba(34, 197, 94, 0.2));
+  }
+}
+
+.glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* ─── Status Badge Dots ─────────────────────────────────────────── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.5); }
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.status-dot-good { background: #22c55e; --glow-color: rgba(34, 197, 94, 0.5); }
+.status-dot-moderate { background: #eab308; --glow-color: rgba(234, 179, 8, 0.5); }
+.status-dot-poor { background: #f97316; --glow-color: rgba(249, 115, 22, 0.5); }
+.status-dot-bad { background: #ef4444; --glow-color: rgba(239, 68, 68, 0.5); }
+
+/* ─── Gauge Ring Animation ──────────────────────────────────────── */
+@keyframes gauge-fill {
+  from { stroke-dashoffset: var(--gauge-circumference, 283); }
+  to { stroke-dashoffset: var(--gauge-offset, 0); }
+}
+
+.gauge-ring {
+  animation: gauge-fill 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  filter: drop-shadow(0 0 6px var(--gauge-color, #22c55e));
+}
+
+/* ─── Fade In ───────────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* ─── Alert Severity Borders ────────────────────────────────────── */
+.alert-warning {
+  border-left: 3px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.04);
+}
+
+.alert-danger {
+  border-left: 3px solid #ef4444;
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.alert-critical {
+  border-left: 3px solid #dc2626;
+  background: rgba(220, 38, 38, 0.06);
+}
+
+/* ─── Ticker Marquee ────────────────────────────────────────────── */
+@keyframes marquee {
+  from { transform: translateX(100%); }
+  to { transform: translateX(-100%); }
+}
+
+.marquee {
+  animation: marquee 25s linear infinite;
+}
+
+/* ─── Section Headers ───────────────────────────────────────────── */
+.section-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: white;
+  letter-spacing: -0.02em;
+}
+
+.section-subtitle {
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 0.125rem;
+}
+
+/* ─── Leaflet Map Fixes ─────────────────────────────────────────── */
+.leaflet-container {
+  background: #0a0b14 !important;
+  border-radius: 16px;
+}
+
+.leaflet-popup-content-wrapper {
+  background: rgba(13, 15, 26, 0.96) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+  color: #e2e8f0 !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(13, 15, 26, 0.96) !important;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(13, 15, 26, 0.92) !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(13, 15, 26, 0.85) !important;
+  color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.leaflet-control-attribution a {
+  color: rgba(99, 102, 241, 0.5) !important;
+}
+
+/* ─── Grid Noise Overlay ────────────────────────────────────────── */
+.noise-overlay::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.015;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+}
