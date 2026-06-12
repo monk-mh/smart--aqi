@@ -146,7 +146,13 @@ export function AQIProvider({ children }) {
     fetch(`${API_BASE}/api/sensors`)
       .then((r) => r.json())
       .then((data) => {
-        if (isMounted) setSensors(data);
+        if (isMounted) {
+          setSensors(data);
+          const readings = data
+            .map((s) => s.latest_reading)
+            .filter((r) => r !== null && r !== undefined);
+          setLatestReadings(readings);
+        }
         connect();
       })
       .catch(() => {
@@ -159,10 +165,38 @@ export function AQIProvider({ children }) {
       .then((a) => { if (isMounted) setAlerts(a); })
       .catch(() => {});
 
+    // Set up active polling fallback (every 5 seconds) if WebSockets are down
+    const pollingInterval = setInterval(() => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        return; // WebSocket is healthy
+      }
+
+      fetch(`${API_BASE}/api/sensors`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (isMounted) {
+            setSensors(data);
+            const readings = data
+              .map((s) => s.latest_reading)
+              .filter((r) => r !== null && r !== undefined);
+            setLatestReadings(readings);
+          }
+        })
+        .catch(() => {});
+
+      fetch(`${API_BASE}/api/alerts`)
+        .then((r) => r.json())
+        .then((a) => {
+          if (isMounted) setAlerts(a);
+        })
+        .catch(() => {});
+    }, 5000);
+
     return () => {
       isMounted = false;
       if (wsRef.current) wsRef.current.close();
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      clearInterval(pollingInterval);
       stopFallback();
     };
   }, []); // ← CRITICAL: empty dependency array
