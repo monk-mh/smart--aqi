@@ -5,6 +5,7 @@ Main application with CORS, router mounting, and startup hooks.
 
 import sys
 import io
+import asyncio
 
 # ─── Windows UTF-8 Fix ──────────────────────────────────────────
 # Reconfigure stdout/stderr for UTF-8 so emoji logs don't crash on Windows
@@ -58,11 +59,27 @@ async def lifespan(app: FastAPI):
     print("  WebSocket Alerts: ws://localhost:8000/ws/alerts")
     print("=" * 60)
 
-    # Live simulation is disabled. The system now awaits real telemetry from Wokwi via POST /api/ingest/telemetry.
+    # ─── Start live simulation background task ────────────
+    from services.simulator import live_tick
+    from config import SIMULATION_INTERVAL_SECONDS
+
+    async def simulation_loop():
+        """Continuously generate sensor readings every N seconds."""
+        while True:
+            await live_tick()
+            await asyncio.sleep(SIMULATION_INTERVAL_SECONDS)
+
+    sim_task = asyncio.create_task(simulation_loop())
+    print(f"  Live simulator started (interval={SIMULATION_INTERVAL_SECONDS}s)")
 
     yield
 
     # ─── Shutdown ────────────────────────────────────────
+    sim_task.cancel()
+    try:
+        await sim_task
+    except asyncio.CancelledError:
+        pass
     print("\n  SmartAQ Campus server shutting down...")
 
 
