@@ -26,7 +26,7 @@ elif frontend_url:
     CORS_ORIGINS.append(frontend_url)
 
 # ─── Simulation ──────────────────────────────────────────────────
-SIMULATION_INTERVAL_SECONDS = 3
+SIMULATION_INTERVAL_SECONDS = 5
 HISTORICAL_BACKFILL_HOURS = 48
 
 # ─── AQI Thresholds for Alerts ──────────────────────────────────

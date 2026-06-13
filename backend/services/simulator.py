@@ -156,70 +156,82 @@ def generate_historical(hours: int = 48):
         db.close()
 
 
+# Index tracking which sensor to update next (mirrors Wokwi's currentSensorIndex)
+_current_sensor_index = 0
+
+
 async def live_tick():
     """
-    Generate one realistic sensor reading per sensor and write to DB.
-    Called every N seconds by the background asyncio task in main.py.
+    Generate one reading for a single sensor and write to DB.
+    Cycles through sensors round-robin, one per call — matching
+    the Wokwi sketch which updates one sensor every 5 seconds.
     """
-    import asyncio
+    global _current_sensor_index
 
     db = SessionLocal()
     try:
         sensors = db.query(Sensor).all()
+        if not sensors:
+            return
+
+        # Pick the current sensor (round-robin)
+        sensor = sensors[_current_sensor_index % len(sensors)]
+        _current_sensor_index = (_current_sensor_index + 1) % len(sensors)
+
+        profile = LOCATION_PROFILES.get(sensor.id)
+        if not profile:
+            return
+
         now = datetime.now(timezone.utc)
         time_factor = _get_time_factor(now)
 
-        for sensor in sensors:
-            profile = LOCATION_PROFILES.get(sensor.id)
-            if not profile:
-                continue
+        # Occasionally create a spike event
+        if random.random() < 0.02 and sensor.id not in active_spikes:
+            active_spikes[sensor.id] = random.randint(3, 8)
 
-            # Occasionally create a spike event
-            if random.random() < 0.02 and sensor.id not in active_spikes:
-                active_spikes[sensor.id] = random.randint(3, 8)
+        spike_mult = 1.0
+        if sensor.id in active_spikes:
+            spike_mult = random.uniform(2.5, 4.0)
+            active_spikes[sensor.id] -= 1
+            if active_spikes[sensor.id] <= 0:
+                del active_spikes[sensor.id]
 
-            spike_mult = 1.0
-            if sensor.id in active_spikes:
-                spike_mult = random.uniform(2.5, 4.0)
-                active_spikes[sensor.id] -= 1
-                if active_spikes[sensor.id] <= 0:
-                    del active_spikes[sensor.id]
+        is_malfunction = random.random() < 0.003
 
-            is_malfunction = random.random() < 0.003
+        pm25 = round(max(0, _add_gaussian_noise(profile["pm25"] * time_factor * spike_mult)), 1)
+        pm10 = round(max(0, _add_gaussian_noise(profile["pm10"] * time_factor * spike_mult)), 1)
+        co2  = round(max(0, _add_gaussian_noise(profile["co2"] * time_factor * (spike_mult ** 0.5), 0.05)), 0)
+        no2  = round(max(0, _add_gaussian_noise(profile["no2"] * time_factor * spike_mult)), 1)
+        so2  = round(max(0, _add_gaussian_noise(profile["so2"] * time_factor * spike_mult)), 1)
+        temperature = round(min(50, max(-10, _add_gaussian_noise(profile["temperature"], 0.03))), 1)
+        humidity    = round(min(100, max(0, _add_gaussian_noise(profile["humidity"], 0.05))), 1)
 
-            pm25 = round(max(0, _add_gaussian_noise(profile["pm25"] * time_factor * spike_mult)), 1)
-            pm10 = round(max(0, _add_gaussian_noise(profile["pm10"] * time_factor * spike_mult)), 1)
-            co2  = round(max(0, _add_gaussian_noise(profile["co2"] * time_factor * (spike_mult ** 0.5), 0.05)), 0)
-            no2  = round(max(0, _add_gaussian_noise(profile["no2"] * time_factor * spike_mult)), 1)
-            so2  = round(max(0, _add_gaussian_noise(profile["so2"] * time_factor * spike_mult)), 1)
-            temperature = round(min(50, max(-10, _add_gaussian_noise(profile["temperature"], 0.03))), 1)
-            humidity    = round(min(100, max(0, _add_gaussian_noise(profile["humidity"], 0.05))), 1)
+        aqi_result = calculate_aqi({"pm25": pm25, "pm10": pm10, "co2": co2, "no2": no2, "so2": so2})
 
-            aqi_result = calculate_aqi({"pm25": pm25, "pm10": pm10, "co2": co2, "no2": no2, "so2": so2})
+        reading = Telemetry(
+            id=str(uuid.uuid4()),
+            sensor_id=sensor.id,
+            timestamp=now.isoformat(),
+            status="malfunction" if is_malfunction else "active",
+            battery=sensor.battery,
+            pm25=pm25, pm10=pm10, co2=co2, no2=no2, so2=so2,
+            temperature=temperature, humidity=humidity,
+            aqi=aqi_result["aqi"],
+            aqi_category=aqi_result["category"],
+            dominant_pollutant=aqi_result["dominant_pollutant"]
+        )
+        db.add(reading)
 
-            reading = Telemetry(
-                id=str(uuid.uuid4()),
-                sensor_id=sensor.id,
-                timestamp=now.isoformat(),
-                status="malfunction" if is_malfunction else "active",
-                battery=sensor.battery,
-                pm25=pm25, pm10=pm10, co2=co2, no2=no2, so2=so2,
-                temperature=temperature, humidity=humidity,
-                aqi=aqi_result["aqi"],
-                aqi_category=aqi_result["category"],
-                dominant_pollutant=aqi_result["dominant_pollutant"]
-            )
-            db.add(reading)
-
-            if not is_malfunction:
-                _check_and_generate_alert(db, {
-                    "sensor_id": sensor.id,
-                    "aqi": aqi_result["aqi"],
-                    "timestamp": now.isoformat(),
-                }, sensor.name)
+        if not is_malfunction:
+            _check_and_generate_alert(db, {
+                "sensor_id": sensor.id,
+                "aqi": aqi_result["aqi"],
+                "timestamp": now.isoformat(),
+            }, sensor.name)
 
         db.commit()
     except Exception as e:
         print(f"[live_tick] Error: {e}")
     finally:
         db.close()
+
