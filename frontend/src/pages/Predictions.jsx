@@ -45,15 +45,38 @@ export default function Predictions() {
   const [hoursAhead, setHoursAhead] = useState(24);
 
   useEffect(() => {
-    setLoading(true);
-    fetch(`${API_BASE}/api/predictions?hours_ahead=${hoursAhead}`)
-      .then((r) => r.json())
-      .then((data) => setPredictionData(data))
-      .catch((e) => {
-        console.error("Failed to fetch predictions", e);
-        setPredictionData({ data: [], model: null });
-      })
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    let retryTimer = null;
+
+    function fetchPredictions() {
+      setLoading(true);
+      fetch(`${API_BASE}/api/predictions?hours_ahead=${hoursAhead}`)
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
+        .then((data) => {
+          if (cancelled) return;
+          if (data.error || !data.data?.length) {
+            // Server returned an error (e.g. insufficient data) — retry in 5s
+            setPredictionData({ data: [], model: null });
+            retryTimer = setTimeout(() => { if (!cancelled) fetchPredictions(); }, 5000);
+          } else {
+            setPredictionData(data);
+          }
+        })
+        .catch((e) => {
+          if (cancelled) return;
+          console.error("Failed to fetch predictions", e);
+          setPredictionData({ data: [], model: null });
+          // Retry in 5s on network failure
+          retryTimer = setTimeout(() => { if (!cancelled) fetchPredictions(); }, 5000);
+        })
+        .finally(() => { if (!cancelled) setLoading(false); });
+    }
+
+    fetchPredictions();
+    return () => { cancelled = true; clearTimeout(retryTimer); };
   }, [hoursAhead]);
 
   const chartData = useMemo(() => {

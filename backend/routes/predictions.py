@@ -41,12 +41,16 @@ def _linear_regression(x: list, y: list) -> tuple:
 
 @router.get("")
 async def get_predictions(hours_ahead: int = Query(24, ge=1, le=48), db: Session = Depends(get_db)):
-    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    # Look back up to 48h to ensure we always find enough data (matches backfill window)
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
     readings = db.query(Telemetry).filter(Telemetry.timestamp >= cutoff, Telemetry.status != "malfunction").all()
 
     hourly = defaultdict(lambda: {"aqi_sum": 0, "count": 0})
     for r in readings:
-        ts = datetime.fromisoformat(r.timestamp)
+        try:
+            ts = datetime.fromisoformat(r.timestamp)
+        except (ValueError, TypeError):
+            continue
         hour_key = ts.strftime("%Y-%m-%d %H:00")
         hourly[hour_key]["aqi_sum"] += r.aqi or 0
         hourly[hour_key]["count"] += 1
@@ -55,8 +59,8 @@ async def get_predictions(hours_ahead: int = Query(24, ge=1, le=48), db: Session
     x_vals = list(range(len(sorted_hours)))
     y_vals = [hourly[h]["aqi_sum"] / hourly[h]["count"] for h in sorted_hours]
 
-    if len(x_vals) < 3:
-        return {"error": "Insufficient data for prediction", "data": []}
+    if len(x_vals) < 2:
+        return {"error": "Insufficient data for prediction", "data": [], "model": None}
 
     slope, intercept, r_squared = _linear_regression(x_vals, y_vals)
 
@@ -68,6 +72,7 @@ async def get_predictions(hours_ahead: int = Query(24, ge=1, le=48), db: Session
     last_x = len(x_vals) - 1
     predictions = []
 
+    # Show up to the last 12 actual hourly readings
     for i, hour_key in enumerate(sorted_hours[-12:]):
         actual_aqi = round(hourly[hour_key]["aqi_sum"] / hourly[hour_key]["count"], 1)
         predictions.append({
@@ -111,3 +116,4 @@ async def get_predictions(hours_ahead: int = Query(24, ge=1, le=48), db: Session
         },
         "data": predictions,
     }
+
